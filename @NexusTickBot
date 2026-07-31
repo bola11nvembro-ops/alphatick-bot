@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import time
 import random
 
-TELEGRAM_TOKEN = "8787520019:AAFOQYsuatmUNyCQgRkRGDDeg_5sST14I8"
+TELEGRAM_TOKEN = "8649700861:AAGtH_jiMasG9kw9RdrAqdiesPDsEB6-MwQ"
 CHAT_ID = "771454310"
 
 PARES_ABERTOS = [
@@ -40,20 +40,20 @@ def verificar_preco_real(par):
 
 def obter_preco_medio(par):
     precos = []
-    for _ in range(3):
+    for _ in range(2):
         p = verificar_preco_real(par)
         if p is not None:
             precos.append(p)
-        time.sleep(0.5)
+        time.sleep(2.0)  # Pausa maior para evitar bloqueio 429
     if precos:
         return sum(precos) / len(precos)
     return None
 
 def analisar_tendencia_profissional(par):
     p1 = obter_preco_medio(par)
-    time.sleep(1)
+    time.sleep(2)
     p2 = obter_preco_medio(par)
-    time.sleep(1)
+    time.sleep(2)
     p3 = obter_preco_medio(par)
     
     if p1 is None or p2 is None or p3 is None:
@@ -79,12 +79,11 @@ def validar_resultado(preco_inicial, preco_atual, direcao):
     return False
 
 def iniciar_robo():
-    print("🤖 AlphaTick Pro (Com novo Token Ativo)...")
+    print("🤖 AlphaTick Pro Iniciado com sucesso...")
     enviar_telegram(
-        "🚀 **ALPHATICK PRO – SISTEMA REINICIADO** 🚀 \n\n"
-        "🔄 `Conexão com o Telegram restabelecida com sucesso.`\n"
-        "📋 `Histórico limpo e pronto a operar!`\n"
-        "🛠️ *Manutenção rápida às 05:00 ativa.*"
+        "🚀 **ALPHATICK PRO – ONLINE** 🚀 \n\n"
+        "🔄 `Conexão com o Telegram estabelecida.`\n"
+        "📋 `Sistema pronto a operar!`"
     )
 
 def main():
@@ -96,7 +95,7 @@ def main():
             agora = datetime.utcnow() + timedelta(hours=1)
             
             if agora.hour == 5 and agora.minute == 0:
-                enviar_telegram("🛠️ **MANUTENÇÃO PROGRAMADA DAS 05:00** 🛠️\n\n`A reiniciar sistemas e limpar lotes para o novo dia...`")
+                enviar_telegram("🛠️ **MANUTENÇÃO PROGRAMADA DAS 05:00**")
                 historico_sinais.clear()
                 time.sleep(70)
                 continue
