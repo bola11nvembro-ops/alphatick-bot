@@ -44,16 +44,16 @@ def obter_preco_medio(par):
         p = verificar_preco_real(par)
         if p is not None:
             precos.append(p)
-        time.sleep(2.0)  # Pausa maior para evitar bloqueio 429
+        time.sleep(1.0)
     if precos:
         return sum(precos) / len(precos)
     return None
 
 def analisar_tendencia_profissional(par):
     p1 = obter_preco_medio(par)
-    time.sleep(2)
+    time.sleep(1)
     p2 = obter_preco_medio(par)
-    time.sleep(2)
+    time.sleep(1)
     p3 = obter_preco_medio(par)
     
     if p1 is None or p2 is None or p3 is None:
@@ -78,16 +78,31 @@ def validar_resultado(preco_inicial, preco_atual, direcao):
         return diferenca < 0.00000
     return False
 
-def iniciar_robo():
-    print("🤖 AlphaTick Pro Iniciado com sucesso...")
-    enviar_telegram(
-        "🚀 **ALPHATICK PRO – ONLINE** 🚀 \n\n"
-        "🔄 `Conexão com o Telegram estabelecida.`\n"
-        "📋 `Sistema pronto a operar!`"
-    )
-
 def main():
-    iniciar_robo()
+    print("🤖 AlphaTick Pro Iniciado com teste imediato...")
+    enviar_telegram(
+        "🚀 **ALPHATICK PRO – ONLINE & TESTE ATIVO** 🚀 \n\n"
+        "🔄 `Ligação ao bot @NexusTickBot confirmada!`\n"
+        "📋 `A iniciar disparo do primeiro sinal de teste...`"
+    )
+    
+    time.sleep(3)
+    
+    # Envio forçado imediato do primeiro sinal para validação
+    par_atual = random.choice(PARES_ABERTOS)
+    direcao = analisar_tendencia_profissional(par_atual)
+    agora = datetime.utcnow() + timedelta(hours=1)
+    hora_entrada = agora.replace(second=0, microsecond=0) + timedelta(minutes=5)
+    
+    msg_sinal = (
+        f"📊 *PRIMEIRO SINAL DE TESTE* 📊\n\n"
+        f"💱 Par: *{par_atual}*\n"
+        f"⏰ Entrada: *{hora_entrada.strftime('%H:%M')} (M5)*\n"
+        f"📈 Direção: *{direcao}*\n"
+        f"📱 **Sistema a operar com sucesso!**"
+    )
+    enviar_telegram(msg_sinal)
+    
     historico_sinais = []
     
     while True:
@@ -172,3 +187,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
