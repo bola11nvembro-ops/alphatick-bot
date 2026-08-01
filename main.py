@@ -14,6 +14,9 @@ PARES_ABERTOS = [
     "USD/CAD", "NZD/USD", "EUR/AUD", "GBP/AUD"
 ]
 
+estado_atual_robo = "A iniciar ciclos..."
+ultimo_sinal_gerado = "Ainda nenhum sinal gerado."
+
 def enviar_telegram(texto):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {"chat_id": CHAT_ID, "text": texto, "parse_mode": "Markdown"}
@@ -24,6 +27,32 @@ def enviar_telegram(texto):
     except Exception as e:
         print(f"Erro Telegram: {e}")
 
+def verificar_mensagens_telegram(ultimo_offset):
+    global estado_atual_robo, ultimo_sinal_gerado
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates?offset={ultimo_offset}&timeout=1"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=3) as response:
+            dados = json.loads(response.read().decode())
+            if dados.get("ok") and dados.get("result"):
+                for update in dados["result"]:
+                    ultimo_offset = update["update_id"] + 1
+                    msg = update.get("message", {})
+                    texto_msg = msg.get("text", "").lower()
+                    
+                    if "/status" in texto_msg or "o que se passa" in texto_msg or "status" in texto_msg:
+                        relatorio = (
+                            f"🤖 **RELATÓRIO DE STATUS DO ROBÔ** 🤖\n\n"
+                            f"🟢 Estado: `Online e Operacional`\n"
+                            f"📊 Atividade Atual: `{estado_atual_robo}`\n"
+                            f"📈 Último Sinal: `{ultimo_sinal_gerado}`\n"
+                            f"⏰ Hora do Servidor: `{(datetime.utcnow() + timedelta(hours=1)).strftime('%H:%M:%S')}`"
+                        )
+                        enviar_telegram(relatorio)
+    except Exception as e:
+        pass
+    return ultimo_offset
+
 def analisar_tendencia_estavel(par):
     seed_val = int(datetime.utcnow().strftime("%Y%m%d%H%M")) + len(par)
     random.seed(seed_val)
@@ -32,19 +61,23 @@ def analisar_tendencia_estavel(par):
     return random.choices(direcoes, weights=pesos, k=1)[0]
 
 def main():
-    print("🤖 AlphaTick Pro (Motor Interno Estável) Iniciado com sucesso...")
+    global estado_atual_robo, ultimo_sinal_gerado
+    print("🤖 AlphaTick Pro com comando interativo Iniciado...")
     enviar_telegram(
-        "🚀 **ALPHATICK PRO – ONLINE & CONECTADO** 🚀 \n\n"
-        "🔄 `Ligação ao bot @NexusTickBot estabelecida com sucesso!`\n"
-        "📋 `Sistema pronto a operar 24/7 sem interrupções!`"
+        "🚀 **ALPHATICK PRO – ONLINE & INTERATIVO** 🚀 \n\n"
+        "💬 `Podes enviar /status ou perguntar 'o que se passa' a qualquer momento para ver o relatório!`"
     )
     
+    offset = 0
     time.sleep(2)
     
     par_atual = random.choice(PARES_ABERTOS)
     direcao = analisar_tendencia_estavel(par_atual)
     agora = datetime.utcnow() + timedelta(hours=1)
     hora_entrada = agora.replace(second=0, microsecond=0) + timedelta(minutes=5)
+    
+    ultimo_sinal_gerado = f"{par_atual} às {hora_entrada.strftime('%H:%M')} ({direcao})"
+    estado_atual_robo = "A aguardar tempo de entrada"
     
     msg_inicial = (
         f"📊 *PRIMEIRO SINAL DE ATIVAÇÃO* 📊\n\n"
@@ -59,6 +92,9 @@ def main():
     
     while True:
         try:
+            # Verifica mensagens do Telegram a cada ciclo curto
+            offset = verificar_mensagens_telegram(offset)
+            
             agora = datetime.utcnow() + timedelta(hours=1)
             
             if agora.hour == 5 and agora.minute == 0:
@@ -75,15 +111,15 @@ def main():
             hora_entrada = agora.replace(second=0, microsecond=0) + timedelta(minutes=extra)
             momento_envio = hora_entrada - timedelta(seconds=40)
             
+            estado_atual_robo = f"A monitorizar para o sinal das {hora_entrada.strftime('%H:%M')}"
+            
             while datetime.now() < momento_envio:
-                restante = (momento_envio - datetime.now()).total_seconds()
-                if restante > 10:
-                    time.sleep(5)
-                else:
-                    time.sleep(0.5)
+                offset = verificar_mensagens_telegram(offset)
+                time.sleep(1.0)
             
             par_atual = random.choice(PARES_ABERTOS)
             direcao = analisar_tendencia_estavel(par_atual)
+            ultimo_sinal_gerado = f"{par_atual} às {hora_entrada.strftime('%H:%M')} ({direcao})"
             
             hora_fim_op = hora_entrada + timedelta(minutes=5)
             hora_gale1 = hora_fim_op + timedelta(minutes=5)
@@ -98,8 +134,10 @@ def main():
             )
             enviar_telegram(msg_sinal)
             
+            estado_atual_robo = f"Em operação no par {par_atual} (A aguardar fecho)"
             while datetime.now() < hora_fim_op:
-                time.sleep(5)
+                offset = verificar_mensagens_telegram(offset)
+                time.sleep(1.0)
                 
             horario_str = hora_entrada.strftime('%H:%M')
             horario_atual_msg = (datetime.utcnow() + timedelta(hours=1)).strftime('%H:%M')
@@ -111,8 +149,10 @@ def main():
                 enviar_telegram(f"`{horario_str} {par_atual}` — ✅\n\n`{horario_atual_msg}`\n\n **WIN** 🟢")
             else:
                 enviar_telegram(f"⚠️ **Loss na 1ª vela** — A aguardar fecho do 1º GALE às `{hora_gale1.strftime('%H:%M')}`...")
+                estado_atual_robo = "Em ciclo de Gale 1"
                 while datetime.now() < hora_gale1:
-                    time.sleep(5)
+                    offset = verificar_mensagens_telegram(offset)
+                    time.sleep(1.0)
                     
                 res_gale1 = random.random() > 0.35
                 if res_gale1:
@@ -120,8 +160,10 @@ def main():
                     enviar_telegram(f"`{horario_str} {par_atual}` — ✅ (GALE 1) 🟢")
                 else:
                     enviar_telegram(f"⚠️ **Loss no GALE 1** — A aguardar fecho do 2º GALE às `{hora_gale2.strftime('%H:%M')}`...")
+                    estado_atual_robo = "Em ciclo de Gale 2"
                     while datetime.now() < hora_gale2:
-                        time.sleep(5)
+                        offset = verificar_mensagens_telegram(offset)
+                        time.sleep(1.0)
                         
                     res_gale2 = random.random() > 0.28
                     if res_gale2:
@@ -133,7 +175,7 @@ def main():
                         
         except Exception as e:
             print(f"Erro no ciclo principal: {e}")
-            time.sleep(10)
+            time.sleep(5)
 
 if __name__ == "__main__":
-    main() 
+    main()
